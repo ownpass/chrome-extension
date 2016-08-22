@@ -6,6 +6,7 @@ function persistCredentials(data) {
             'id': data[i].id,
             'identity': data[i].identity,
             'credential': data[i].credential,
+            'raw_url': data[i].urlRaw
         });
     }
 }
@@ -41,6 +42,7 @@ function handleSynchronization(oAuth, callback) {
     credentialsStorage = [];
 
     executeSynchronizationRequest(url, oAuth, function() {
+        window.localStorage.setItem('cached-credentials', JSON.stringify(credentialsStorage));
         callback();
     });
 }
@@ -48,41 +50,51 @@ function handleSynchronization(oAuth, callback) {
 function handleFormSubmission(msg, sender, callback) {
     var oAuth = JSON.parse(window.localStorage.getItem('oauth'));
 
-    var parser = document.createElement('a');
-    parser.href = msg.raw_url;
-
-    console.log(oAuth);
-    console.log(parser);
-    console.log(msg);
-    console.log(sender);
-    console.log(callback);
+    // When the user is not logged in, abort
+    if (!oAuth) {
+        return;
+    }
 
     $.ajax({
         method: 'POST',
-        url: oAuth.server + '/api/user/credential?host=' + parser.hostname,
+        url: oAuth.server + '/api/user/credential',
         headers: {
-            'Authorization': oAuth.token_tye + ' ' + oAuth.access_token
+            'Authorization': oAuth.token_type + ' ' + oAuth.access_token,
+            'Content-Type': 'application/json'
         },
         dataType: 'json',
+        data: JSON.stringify({
+            'identity': msg.identity,
+            'credential': msg.credential,
+            'raw_url': msg.raw_url
+        }),
         error: function (jqXHR) {
-            if (!jqXHR.responseJSON) {
-                console.log(jqXHR.responseText);
-            } else {
-                console.log(jqXHR.responseJSON);
-            }
+            console.log(jqXHR);
         },
         success: function (data) {
             console.log(data);
         }
     });
+
+    callback();
 }
 
 function handleFindIdentities(msg, sender, callback) {
-    var parser = document.createElement('a');
-    parser.href = msg.raw_url;
+    var messageParser = document.createElement('a'),
+        identityParser = document.createElement('a'),
+        result = [];
 
-    console.log(parser.hostname, credentialsStorage);
-    console.log(msg, sender, callback);
+    messageParser.href = msg.raw_url;
+
+    for (var i = 0; i < credentialsStorage.length; ++i) {
+        identityParser.href = credentialsStorage[i].raw_url;
+
+        if (identityParser.hostname === messageParser.hostname) {
+            result.push(credentialsStorage[i]);
+        }
+    }
+
+    callback(result);
 }
 
 function handleLogin(msg) {
@@ -98,7 +110,10 @@ function handleLogin(msg) {
 }
 
 function handleLogout() {
+    window.localStorage.removeItem('cached-credentials');
     window.localStorage.removeItem('oauth');
+
+    credentialsStorage = [];
 
     chrome.browserAction.setPopup({
         popup: "html/login.html"
@@ -106,8 +121,6 @@ function handleLogout() {
 }
 
 chrome.runtime.onMessage.addListener(function (msg, sender, callback) {
-    console.log('received message: ' + msg.cmd);
-
     switch (msg.cmd) {
         case 'document-form-submit':
             handleFormSubmission(msg, sender, callback);
@@ -131,4 +144,9 @@ if (!window.localStorage.getItem('oauth')) {
     chrome.browserAction.setPopup({
         popup: "html/login.html"
     });
+}
+
+credentialsStorage = JSON.parse(window.localStorage.getItem('cached-credentials'));
+if (!credentialsStorage) {
+    credentialsStorage = [];
 }

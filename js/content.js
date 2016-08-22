@@ -54,12 +54,7 @@ function findRelevantForms() {
     return result;
 }
 
-function findIdentity(url) {
-    var callback = function(data) {
-        console.log(data);
-    };
-
-    console.log('sending message to find identities');
+function findIdentities(url, callback) {
     chrome.runtime.sendMessage(
         null,
         {
@@ -70,40 +65,49 @@ function findIdentity(url) {
     );
 }
 
+function populateForm(form, identity) {
+    form.identity.val(identity.identity);
+    form.credential.val(identity.credential);
+}
+
 function handleFormPopulation() {
     var forms = findRelevantForms();
-    var firstIdentity = findIdentity(window.location.href);
 
-    console.log(forms, firstIdentity);
+    if (forms.length === 0) {
+        return;
+    }
+
+    findIdentities(window.location.href, function (identities) {
+        if (identities.length === 0) {
+            return;
+        }
+
+        for (var i = 0; i < forms.length; ++i) {
+            populateForm(forms[i], identities[0]);
+        }
+    });
 }
 
 function handleFormSubmission() {
-    // Attach the submit listeners so we know what data to store on submit.
-    $('form').on('submit', function () {
-        var inputElements = $('input', this);
+    var forms = findRelevantForms(),
+        url = window.location.href,
+        onSubmit = function (form, identity, credential) {
+            return function () {
+                chrome.runtime.sendMessage(
+                    null,
+                    {
+                        'cmd': 'document-form-submit',
+                        'raw_url': url,
+                        'identity': identity.val(),
+                        'credential': credential.val()
+                    }
+                );
+            };
+        };
 
-        var identity = findElement(identityNames, inputElements);
-        if (!identity) {
-            console.info('No identity found, aborting registration.');
-            return;
-        }
-
-        var credential = findElement(credentialNames, inputElements);
-        if (!credential) {
-            console.info('No credential found, aborting registration.');
-            return;
-        }
-
-        chrome.runtime.sendMessage(
-            null,
-            {
-                'cmd': 'document-form-submit',
-                'raw_url': window.location.href,
-                'identity': identity.val(),
-                'credential': credential.val()
-            }
-        );
-    });
+    for (var i = 0; i < forms.length; ++i) {
+        $(forms[i].form).on('submit', onSubmit(forms[i].form, forms[i].identity, forms[i].credential));
+    }
 }
 
 window.onload = function () {
