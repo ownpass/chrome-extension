@@ -1,0 +1,25 @@
+{
+  "browser": true,
+  "node": true,
+  "curly": true,
+  "eqeqeq": true,
+  "immed": true,
+  "jquery": true,
+  "latedef": true,
+  "newcap": true,
+  "noarg": true,
+  "nonew": true,
+  "undef": true,
+  "unused": true,
+  "trailing": true,
+  "boss": true,
+  "eqnull": true,
+  "globals": {
+    "alert": true,
+    "chrome": true,
+    "beforeEach": true,
+    "describe": true,
+    "afterEach": true,
+    "it": true
+  }
+}

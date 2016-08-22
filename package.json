@@ -1,0 +1,30 @@
+{
+  "name": "ownpass-chrome-extension",
+  "version": "1.0.0",
+  "description": "The OwnPass Chrome extension.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "chrome",
+    "ownpass",
+    "password"
+  ],
+  "author": {
+    "name": "Walter Tamboere",
+    "email": "walter@tamboer.nl",
+    "url": "http://waltertamboer.nl"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "grunt": "~0.4.5",
+    "grunt-contrib-clean": "^1.0.0",
+    "grunt-contrib-compress": "^1.1.0",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-contrib-jshint": "^1.0.0",
+    "grunt-contrib-watch": "^1.0.0",
+    "jquery": "^2.2.1",
+    "node-rsa": "^0.3.2"
+  }
+}
