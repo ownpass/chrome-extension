@@ -1,12 +1,13 @@
 var identityNames = [
-        /^.*identity$/,
-        /^.*username$/,
-        /^.*user$/
+        /^.*identity.*$/,
+        /^.*email.*$/,
+        /^.*username.*$/,
+        /^.*user.*$/
     ],
     credentialNames = [
-        /^.*credential$/,
-        /^.*password$/,
-        /^.*pass$/
+        /^.*credential.*$/,
+        /^.*password.*$/,
+        /^.*pass.*$/
     ];
 
 function findElement(possibleNames, inputElements) {
