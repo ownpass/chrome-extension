@@ -21,6 +21,12 @@ function executeSynchronizationRequest(url, oAuth, callback) {
         dataType: 'json',
         error: function(jqXHR) {
             console.log(jqXHR);
+            // TODO: Handle 401 errors but be careful not to end in an infinite loop.
+            /*if (jqXHR.status === 401) {
+                handleLoginRefreshment(function() {
+                    executeSynchronizationRequest(url, oAuth, callback);
+                });
+            }*/
 
             callback();
         },
@@ -70,6 +76,14 @@ function handleFormSubmission(msg, sender, callback) {
         }),
         error: function (jqXHR) {
             console.log(jqXHR);
+            // TODO: Handle 401 errors but be careful not to end in an infinite loop.
+            /*
+            if (jqXHR.status === 401) {
+                handleLoginRefreshment(function() {
+                    handleFormSubmission(msg, sender, callback);
+                });
+            }
+            */
         },
         success: function (data) {
             credentialsStorage.push({
@@ -104,15 +118,38 @@ function handleFindIdentities(msg, sender, callback) {
     callback(result);
 }
 
-function handleLogin(msg) {
-    msg.data.expires_at = Date.now() + (msg.data.expires_in * 1000);
+function handleLogin(data) {
+    data.expires_at = Date.now() + (data.expires_in * 1000);
 
-    handleSynchronization(msg.data, function() {
-        window.localStorage.setItem('oauth', JSON.stringify(msg.data));
+    handleSynchronization(data, function() {
+        window.localStorage.setItem('oauth', JSON.stringify(data));
 
         chrome.browserAction.setPopup({
             popup: "html/popup.html"
         });
+    });
+}
+
+function handleLoginRefreshment() {
+    var oAuth = JSON.parse(window.localStorage.getItem('oauth'));
+
+    $.ajax({
+        method: 'POST',
+        url: oAuth.server + '/oauth',
+        dataType: 'json',
+        data: {
+            'grant_type': 'refresh_token',
+            'refresh_token': oAuth.refresh_token,
+            'client_id': 'chrome-extension'
+        },
+        error: function (jqXHR) {
+            console.log(jqXHR);
+        },
+        success: function (data) {
+            data.server = oAuth.server;
+
+            handleLogin(data);
+        }
     });
 }
 
@@ -138,7 +175,11 @@ chrome.runtime.onMessage.addListener(function (msg, sender, callback) {
             break;
 
         case 'login':
-            handleLogin(msg, sender, callback);
+            handleLogin(msg.data, sender, callback);
+            break;
+
+        case 'login-refresh':
+            handleLoginRefreshment(msg, sender, callback);
             break;
 
         case 'logout':
