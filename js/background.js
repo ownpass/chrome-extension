@@ -72,7 +72,14 @@ function handleFormSubmission(msg, sender, callback) {
             console.log(jqXHR);
         },
         success: function (data) {
-            console.log(data);
+            credentialsStorage.push({
+                'id': data.id,
+                'identity': data.identity,
+                'credential': data.credential,
+                'raw_url': data.urlRaw
+            });
+
+            window.localStorage.setItem('cached-credentials', JSON.stringify(credentialsStorage));
         }
     });
 

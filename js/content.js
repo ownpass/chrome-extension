@@ -89,20 +89,32 @@ function handleFormPopulation() {
     });
 }
 
+function persistIdentity(url, identities, identity, credential) {
+    for (var i = 0; i < identities.length; ++i) {
+        if (identities[i].identity === identity && identities[i].credential === credential) {
+            return;
+        }
+    }
+
+    chrome.runtime.sendMessage(
+        null,
+        {
+            'cmd': 'document-form-submit',
+            'raw_url': url,
+            'identity': identity,
+            'credential': credential
+        }
+    );
+}
+
 function handleFormSubmission() {
     var forms = findRelevantForms(),
         url = window.location.href,
         onSubmit = function (form, identity, credential) {
             return function () {
-                chrome.runtime.sendMessage(
-                    null,
-                    {
-                        'cmd': 'document-form-submit',
-                        'raw_url': url,
-                        'identity': identity.val(),
-                        'credential': credential.val()
-                    }
-                );
+                findIdentities(url, function (identities) {
+                    persistIdentity(url, identities, identity.val(), credential.val());
+                });
             };
         };
 
