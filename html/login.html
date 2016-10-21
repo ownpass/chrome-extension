@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Setup</title>
+        <title>Login to OwnPass</title>
         <link rel="stylesheet" type="text/css" href="../css/common.css">
         <script src="../js/libs/jquery.min.js"></script>
         <script src="../js/popup.js"></script>
@@ -9,19 +9,19 @@
     <body>
 
         <div id="box">
-            <h1>Login</h1>
+            <h1>Login to OwnPass</h1>
 
             <div id="status-container"></div>
 
             <form>
                 <p>
                     <label for="server">Server address:</label>
-                    <input type="text" id="server" name="server" value="">
+                    <input type="text" id="server" name="server" value="http://localhost/ownpass/ownpass/public/">
                 </p>
 
                 <p>
                     <label for="username">Username:</label>
-                    <input type="text" id="username" name="username" value="">
+                    <input type="text" id="username" name="username" value="walter">
                 </p>
 
                 <p>
@@ -29,7 +29,7 @@
                     <input type="text" id="password" name="password" value="">
                 </p>
 
-                <p>
+                <p class="button-bar">
                     <input type="submit" id="submit" name="submit" value="Login">
                 </p>
             </form>

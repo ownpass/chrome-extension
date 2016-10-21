@@ -34,7 +34,7 @@ function initializeLoginForm() {
 
     loginForm.on('submit', function () {
         var form = $(this);
-        var status = $('#status-container');
+        var status = $('#status-container').removeClass('error');
         var server = $('#server', loginForm);
         var serverVal = server.val().replace(/\/+$/, '');
         var username = $('#username', loginForm);
@@ -49,12 +49,14 @@ function initializeLoginForm() {
         }
 
         if (!usernameVal) {
+            status.addClass('error');
             status.text('Invalid username given.');
             username.focus();
             return false;
         }
 
         if (!passwordVal) {
+            status.addClass('error');
             status.text('Invalid password given.');
             password.focus();
             return false;
@@ -76,10 +78,16 @@ function initializeLoginForm() {
                 form.hide();
             },
             error: function(jqXHR) {
+                status.addClass('error');
+
                 if (!jqXHR.responseJSON) {
-                    status.text('The server does not seem to be accessible.');
-                } else {
+                    status.text('The server does not seem to be available.');
+                } else if (jqXHR.responseJSON.detail) {
                     status.text(jqXHR.responseJSON.detail);
+                } else if (jqXHR.responseJSON.error_description) {
+                    status.text(jqXHR.responseJSON.error_description);
+                } else {
+                    status.text('Failed to login.');
                 }
 
                 password.val('');
