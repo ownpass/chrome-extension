@@ -1,5 +1,6 @@
 function login(server, username, password, data) {
     data.server = server;
+    data.username = username;
 
     chrome.runtime.sendMessage(
         null,

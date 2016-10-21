@@ -2,7 +2,8 @@ var identityNames = [
         /^.*identity.*$/,
         /^.*email.*$/,
         /^.*username.*$/,
-        /^.*user.*$/
+        /^.*user.*$/,
+        /^.*login.*$/
     ],
     credentialNames = [
         /^.*credential.*$/,

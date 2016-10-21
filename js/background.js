@@ -11,12 +11,54 @@ function persistCredentials(data) {
     }
 }
 
+function createDevice(oAuth, callback) {
+    var deviceIds = JSON.parse(window.localStorage.getItem('device-ids'));
+
+    if (!deviceIds) {
+        deviceIds = {};
+    }
+
+    if (deviceIds[oAuth.username]) {
+        callback(deviceIds[oAuth.username]);
+        return;
+    }
+
+    $.ajax({
+        method: 'POST',
+        url: oAuth.server + '/device',
+        headers: {
+            'Authorization': oAuth.token_type + ' ' + oAuth.access_token,
+            'Content-Type': 'application/json'
+        },
+        dataType: 'json',
+        data: JSON.stringify({
+            'name': 'OwnPass Chrome Extension',
+            'description': 'The OwnPass Chrome extension.'
+        }),
+        error: function(jqXHR) {
+            console.log(jqXHR);
+            callback(null);
+        },
+        success: function(data) {
+            deviceIds[oAuth.username] = data.id;
+
+            window.localStorage.setItem('device-ids', JSON.stringify(deviceIds));
+
+            callback(deviceIds[oAuth.username]);
+        }
+    });
+}
+
 function executeSynchronizationRequest(url, oAuth, callback) {
+    var deviceIds = JSON.parse(window.localStorage.getItem('device-ids'));
+    var deviceId = deviceIds[oAuth.username];
+
     $.ajax({
         method: 'GET',
         url: url,
         headers: {
-            'Authorization': oAuth.token_type + ' ' + oAuth.access_token
+            'Authorization': oAuth.token_type + ' ' + oAuth.access_token,
+            'X-OwnPass-Device': deviceId
         },
         dataType: 'json',
         error: function(jqXHR) {
@@ -43,7 +85,7 @@ function executeSynchronizationRequest(url, oAuth, callback) {
 }
 
 function handleSynchronization(oAuth, callback) {
-    var url = oAuth.server + '/api/user/credential';
+    var url = oAuth.server + '/user/credential';
 
     credentialsStorage = [];
 
@@ -61,12 +103,16 @@ function handleFormSubmission(msg, sender, callback) {
         return;
     }
 
+    var deviceIds = JSON.parse(window.localStorage.getItem('device-ids'));
+    var deviceId = deviceIds[oAuth.username];
+
     $.ajax({
         method: 'POST',
-        url: oAuth.server + '/api/user/credential',
+        url: oAuth.server + '/user/credential',
         headers: {
             'Authorization': oAuth.token_type + ' ' + oAuth.access_token,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-OwnPass-Device': deviceId
         },
         dataType: 'json',
         data: JSON.stringify({
@@ -121,11 +167,13 @@ function handleFindIdentities(msg, sender, callback) {
 function handleLogin(data) {
     data.expires_at = Date.now() + (data.expires_in * 1000);
 
-    handleSynchronization(data, function() {
-        window.localStorage.setItem('oauth', JSON.stringify(data));
+    createDevice(data, function() {
+        handleSynchronization(data, function() {
+            window.localStorage.setItem('oauth', JSON.stringify(data));
 
-        chrome.browserAction.setPopup({
-            popup: "html/popup.html"
+            chrome.browserAction.setPopup({
+                popup: "html/popup.html"
+            });
         });
     });
 }
