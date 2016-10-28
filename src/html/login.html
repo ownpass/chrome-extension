@@ -1,0 +1,26 @@
+<div id="box">
+    <h1>Login to OwnPass</h1>
+
+    <div id="status-container" *ngIf="status !== null">{{ status }}</div>
+
+    <form [formGroup]="loginForm" novalidate (submit)="onSubmit($event, loginForm.value)">
+        <p>
+            <label for="server">Server address:</label>
+            <input type="text" id="server" formControlName="server">
+        </p>
+
+        <p>
+            <label for="username">Username:</label>
+            <input type="text" id="username" formControlName="username">
+        </p>
+
+        <p>
+            <label for="password">Password:</label>
+            <input type="text" id="password" formControlName="password">
+        </p>
+
+        <p class="button-bar">
+            <input type="submit" id="submit" name="submit" value="Login">
+        </p>
+    </form>
+</div>

@@ -1,0 +1,32 @@
+{
+    "compileOnSave": false,
+    "files": [
+        "src/typescript/main.ts"
+    ],
+    "compilerOptions": {
+        "allowUnreachableCode": false,
+        "allowUnusedLabels": false,
+        "declaration": false,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitAny": false,
+        "noImplicitReturns": true,
+        "noImplicitUseStrict": false,
+        "outDir": "./build/ng-compiled/",
+        "pretty": true,
+        "removeComments": false,
+        "rootDir": "./src/typescript",
+        "sourceMap": true,
+        "target": "es5",
+        "typeRoots": [
+            "./node_modules/@types",
+            "./node_modules"
+        ],
+        "types": [
+            "core-js"
+        ]
+    }
+}

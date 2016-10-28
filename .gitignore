@@ -1,1 +1,6 @@
+.sass-cache/
+.tscache/
 node_modules/
+npm-debug.log
+typings/
+*.pem

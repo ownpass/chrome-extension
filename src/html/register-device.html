@@ -1,0 +1,27 @@
+<div id="box">
+    <h1>Register Device</h1>
+
+    <p>
+        It appears you have not logged in on this device before. In order to continue, you need to verify this device.
+        Please fill in the name and description of this device and press register. You will receive an e-mail where
+        you can verify this device.
+    </p>
+
+    <div id="status-container" *ngIf="status !== null">{{ status }}</div>
+
+    <form [formGroup]="registerDeviceForm" novalidate (submit)="onSubmit($event, registerDeviceForm.value)">
+        <p>
+            <label for="name">Name:</label>
+            <input type="text" id="name" formControlName="name">
+        </p>
+
+        <p>
+            <label for="description">Description:</label>
+            <input type="text" id="description" formControlName="description">
+        </p>
+
+        <p class="button-bar">
+            <input type="submit" id="submit" name="submit" value="Register">
+        </p>
+    </form>
+</div>

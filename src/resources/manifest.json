@@ -1,6 +1,6 @@
 {
-    "name": "Own Pass",
-    "short_name": "Own Pass",
+    "name": "OwnPass",
+    "short_name": "OwnPass",
     "manifest_version": 2,
     "icons": {
         "16": "images/icon-16.png",
@@ -8,19 +8,20 @@
         "128": "images/icon-128.png"
     },
     "browser_action": {
-        "default_title": "Own Pass",
+        "default_title": "OwnPass",
         "default_icon": "images/icon-128.png",
         "default_popup": "html/popup.html"
     },
     "background": {
         "persistent": true,
         "scripts": [
-            "js/libs/jquery.min.js",
-            "js/background.js"
+            "js/zone.js",
+            "js/Reflect.js",
+            "js/ownpass-chrome-extension.js",
+            "js/ownpass-chrome-extension.min.js"
         ]
     },
     "options_page": "html/options.html",
-    "devtools_page": "html/devtools.html",
     "permissions": [
         "declarativeContent",
         "tabs",
@@ -56,10 +57,9 @@
                 "https://*/*"
             ],
             "js": [
-                "js/libs/jquery.min.js",
                 "js/content.js"
             ]
         }
     ],
-    "content_security_policy": "script-src 'self'; object-src 'self'"
+    "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'"
 }

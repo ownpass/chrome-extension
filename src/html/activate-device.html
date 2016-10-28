@@ -1,0 +1,20 @@
+<div id="box">
+    <h1>Activate Device</h1>
+
+    <p>
+        You have received an activation code via e-mail. Please enter it below.
+    </p>
+
+    <div id="status-container" *ngIf="status !== null">{{ status }}</div>
+
+    <form [formGroup]="activateDeviceForm" novalidate (submit)="onSubmit($event, activateDeviceForm.value)">
+        <p>
+            <label for="code">Code:</label>
+            <input type="text" id="code" formControlName="code">
+        </p>
+
+        <p class="button-bar">
+            <input type="submit" id="submit" name="submit" value="Activate">
+        </p>
+    </form>
+</div>
