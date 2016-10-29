@@ -1,4 +1,4 @@
-(function() {
+(function () {
     var ownPassTopBar = null;
 
     function removeTopBar() {
@@ -8,14 +8,6 @@
             ownPassTopBar = null;
         }
     }
-
-    var onClickNo = function() {
-        removeTopBar();
-    };
-
-    var onClickYes = function() {
-        removeTopBar();
-    };
 
     function createButton(title, callback) {
         var button = document.createElement('span');
@@ -37,7 +29,7 @@
         return button;
     }
 
-    function createTopBar(title) {
+    function createTopBar(title, yesCallback, noCallback) {
         var spanTitle = document.createElement('span');
         spanTitle.appendChild(document.createTextNode(title));
         spanTitle.style.fontWeight = 'bolder';
@@ -61,16 +53,39 @@
         topBar.style.zIndex = 100000;
 
         topBar.appendChild(spanText);
-        topBar.appendChild(createButton('No', onClickNo));
-        topBar.appendChild(createButton('Yes', onClickYes));
+        topBar.appendChild(createButton('No', noCallback));
+        topBar.appendChild(createButton('Yes', yesCallback));
 
         return topBar;
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        ownPassTopBar = createTopBar(document.title);
+    function onFormSubmit(e) {
+        var form = this;
+
+        e.preventDefault();
+
+        ownPassTopBar = createTopBar(
+            document.title,
+            function () {
+                removeTopBar();
+
+                form.dispatchEvent(new Event('submit'));
+            },
+            function () {
+                removeTopBar();
+
+                form.dispatchEvent(new Event('submit'));
+            }
+        );
 
         document.body.appendChild(ownPassTopBar);
+    }
 
+    document.addEventListener('DOMContentLoaded', function () {
+        var forms = document.getElementsByTagName('form');
+
+        for (var i = 0; i < forms.length; ++i) {
+            forms[i].addEventListener('submit', onFormSubmit);
+        }
     });
 })();
