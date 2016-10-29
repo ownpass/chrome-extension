@@ -1,7 +1,9 @@
 {
     "globalDependencies": {
-        "core-js": "registry:dt/core-js#0.0.0+20160725163759",
-        "jasmine": "registry:dt/jasmine#2.2.0+20160621224255",
-        "node": "registry:dt/node#6.0.0+20160909174046"
+        "chrome": "registry:dt/chrome#0.0.0+20160724063844",
+        "filesystem": "registry:dt/filesystem#0.0.0+20160316155526",
+        "filewriter": "registry:dt/filewriter#0.0.0+20160316155526",
+        "firefox": "registry:dt/firefox#0.0.0+20160316155526",
+        "safari-extension": "registry:dt/safari-extension#0.0.0+20160317120654"
     }
 }

@@ -1,7 +1,8 @@
 {
     "compileOnSave": false,
     "files": [
-        "src/typescript/main.ts"
+        "src/typescript/main.ts",
+        "typings/index.d.ts"
     ],
     "compilerOptions": {
         "allowUnreachableCode": false,

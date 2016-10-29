@@ -15,10 +15,7 @@
     "background": {
         "persistent": true,
         "scripts": [
-            "js/zone.js",
-            "js/Reflect.js",
-            "js/ownpass-chrome-extension.js",
-            "js/ownpass-chrome-extension.min.js"
+            "js/background.js"
         ]
     },
     "options_page": "html/options.html",

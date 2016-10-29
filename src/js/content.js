@@ -1,5 +1,9 @@
 (function () {
-    var zIndex = 100000, ownPassBackground = null, ownPassTopBar = null, submitForm = null;
+    var ownPassAuthenticated = false,
+        ownPassBackground = null,
+        ownPassTopBar = null,
+        zIndex = 100000,
+        submitForm = null;
 
     function removeTopBar() {
         if (ownPassBackground) {
@@ -50,7 +54,7 @@
         return button;
     }
 
-    function createTopBar(title, yesCallback, noCallback) {
+    function createTopBar(title, yesCallback, noCallback, cancelCallback) {
         var spanTitle = document.createElement('span');
         spanTitle.appendChild(document.createTextNode(title));
         spanTitle.style.fontWeight = 'bolder';
@@ -74,17 +78,42 @@
         topBar.style.zIndex = zIndex;
 
         topBar.appendChild(spanText);
+        topBar.appendChild(createButton('Cancel', cancelCallback));
         topBar.appendChild(createButton('No', noCallback));
         topBar.appendChild(createButton('Yes', yesCallback));
 
         return topBar;
     }
 
+    function serializeForm(form) {
+        var result = {}, i, valueFields = [], selectFields;
+
+        selectFields = form.getElementsByTagName('select');
+
+        valueFields = valueFields.concat([].slice.call(form.getElementsByTagName('button')));
+        valueFields = valueFields.concat([].slice.call(form.getElementsByTagName('input')));
+        valueFields = valueFields.concat([].slice.call(form.getElementsByTagName('textarea')));
+
+        for (i = 0; i < valueFields.length; ++i) {
+            if (valueFields[i].name) {
+                result[valueFields[i].name] = valueFields[i].value;
+            }
+        }
+
+        for (i = 0; i < selectFields.length; ++i) {
+            if (selectFields[i].name) {
+                result[selectFields[i].name] = selectFields[i].options[selectFields[i].selectedIndex];
+            }
+        }
+
+        return result;
+    }
+
     function onFormSubmit(e) {
         var form = this;
 
         // When the form has already been checked, allow the submit.
-        if (form.getAttribute('data-ownpass-checked') === 'true') {
+        if (!ownPassAuthenticated || form.getAttribute('data-ownpass-checked') === 'true') {
             return true;
         }
 
@@ -94,11 +123,25 @@
             document.title,
             function () {
                 removeTopBar();
+
+                chrome.runtime.sendMessage(
+                    null,
+                    {
+                        'cmd': 'ownpass-document-form-submit',
+                        'title': document.title,
+                        'url': window.location.href,
+                        'values': serializeForm(form)
+                    }
+                );
+
                 submitForm(form);
             },
             function () {
                 removeTopBar();
                 submitForm(form);
+            },
+            function () {
+                removeTopBar();
             }
         );
 
@@ -109,7 +152,7 @@
         return false;
     }
 
-    submitForm = function(form) {
+    submitForm = function (form) {
         form.setAttribute('data-ownpass-checked', true);
 
         if (form.submit instanceof Function) {
@@ -126,6 +169,16 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         var forms = document.getElementsByTagName('form');
+
+        chrome.runtime.sendMessage(
+            null,
+            {
+                'cmd': 'ownpass-has-identity'
+            },
+            function (response) {
+                ownPassAuthenticated = response.authenticated;
+            }
+        );
 
         for (var i = 0; i < forms.length; ++i) {
             forms[i].addEventListener('submit', onFormSubmit);
