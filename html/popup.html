@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title></title>
+        <link href="../css/ownpass-chrome-extension.css" rel="stylesheet" type="text/css">
+    </head>
+    <body>
+
+        <div class="op-model-box">
+            <div class="op-model-box-title">
+                <h1>Login to OwnPass</h1>
+            </div>
+
+            <div class="op-model-box-body">
+                <form action="register-device.html" method="post">
+                    <p>
+                        <label for="server">Server</label>
+                        <span class="op-form-value">http://localhost/ownpass/ownpass/public</span>
+                        <input type="text" name="server" id="server">
+                    </p>
+
+                    <p>
+                        <label for="username">Username</label>
+                        <input type="text" name="username" id="username">
+                    </p>
+
+                    <p>
+                        <label for="password">Password</label>
+                        <input type="password" name="password" id="password">
+                    </p>
+
+                    <div class="op-button-bar">
+                        <button>
+                            Login
+                        </button>
+
+                        <div>
+                            <small>
+                                Do you have trouble logging in?
+                                <a href="recover.html">Click here</a> to recover your credentials.
+                            </small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </body>
+</html>

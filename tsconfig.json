@@ -1,7 +1,7 @@
 {
     "compileOnSave": false,
     "files": [
-        "src/typescript/main.ts",
+        "typescript/main.ts",
         "typings/index.d.ts"
     ],
     "compilerOptions": {
@@ -19,15 +19,8 @@
         "outDir": "./build/ng-compiled/",
         "pretty": true,
         "removeComments": false,
-        "rootDir": "./src/typescript",
+        "rootDir": "./typescript",
         "sourceMap": true,
-        "target": "es5",
-        "typeRoots": [
-            "./node_modules/@types",
-            "./node_modules"
-        ],
-        "types": [
-            "core-js"
-        ]
+        "target": "es5"
     }
 }

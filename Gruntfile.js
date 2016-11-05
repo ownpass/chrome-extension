@@ -35,11 +35,19 @@ module.exports = function (grunt) {
             }
         },
         copy: {
+            fonts: {
+                files: [
+                    {
+                        src: 'node_modules/ownpass-pattern-library/build/fonts/Rokkitt.woff2',
+                        dest: 'build/unpacked/fonts/Rokkitt.woff2'
+                    }
+                ]
+            },
             html: {
                 files: [
                     {
                         expand: true,
-                        cwd: 'src/html/',
+                        cwd: 'html/',
                         src: ['**/*.html'],
                         dest: 'build/unpacked/html/'
                     }
@@ -49,7 +57,7 @@ module.exports = function (grunt) {
                 files: [
                     {
                         expand: true,
-                        cwd: 'src/images/',
+                        cwd: 'images/',
                         src: ['**'],
                         dest: 'build/unpacked/images'
                     }
@@ -59,7 +67,7 @@ module.exports = function (grunt) {
                 files: [
                     {
                         expand: true,
-                        cwd: 'src/js/',
+                        cwd: 'js/',
                         src: ['**'],
                         dest: 'build/unpacked/js'
                     }
@@ -92,7 +100,7 @@ module.exports = function (grunt) {
             resources: {
                 files: [
                     {
-                        src: 'src/resources/manifest.json',
+                        src: 'manifest.json',
                         dest: 'build/unpacked/manifest.json'
                     }
                 ]
@@ -114,18 +122,22 @@ module.exports = function (grunt) {
                     'package.json',
                     'Gruntfile.js',
                     'jshint.json',
-                    'src/**/*.js',
-                    'src/**/*.json'
+                    'tsconfig.json',
+                    'typings.json',
+                    'js/**/*.js'
                 ]
             }
         },
         sass: {
             build: {
                 options: {
-                    style: 'expanded'
+                    style: 'expanded',
+                    loadPath: [
+                        'node_modules/ownpass-pattern-library/scss/'
+                    ]
                 },
                 files: {
-                    'build/unpacked/css/ownpass-chrome-extension.css': 'src/scss/application.scss'
+                    'build/unpacked/css/ownpass-chrome-extension.css': 'scss/application.scss'
                 }
             }
         },
@@ -133,6 +145,9 @@ module.exports = function (grunt) {
             build: {
                 tsconfig: true
             }
+        },
+        typings: {
+            install: {}
         },
         uglify: {
             build: {
@@ -146,11 +161,11 @@ module.exports = function (grunt) {
         watch: {
             build: {
                 files: [
-                    'src/**/*.css',
-                    'src/**/*.html',
-                    'src/**/*.js',
-                    'src/**/*.json',
-                    'src/**/*.ts',
+                    '**/*.css',
+                    '**/*.html',
+                    '**/*.js',
+                    '**/*.json',
+                    '**/*.ts',
                     'Gruntfile.js',
                     'package.json'
                 ],
@@ -171,6 +186,7 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-watch');
     grunt.loadNpmTasks("grunt-ts");
+    grunt.loadNpmTasks('grunt-typings');
 
     grunt.registerTask('update-manifest', 'Updates the manifest file with the needed information.', function () {
         var manifest = grunt.file.readJSON('build/unpacked/manifest.json');

@@ -1,5 +1,6 @@
 {
     "name": "OwnPass",
+    "description": "This extension is a client for OwnPass, a self hosted, open source password management system.",
     "short_name": "OwnPass",
     "manifest_version": 2,
     "icons": {
