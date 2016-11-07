@@ -1,5 +1,5 @@
 (function () {
-    var ownPassAuthenticated = false,
+    var ownPassActivated = false,
         ownPassBackground = null,
         ownPassTopBar = null,
         zIndex = 100000,
@@ -113,7 +113,15 @@
         var form = this;
 
         // When the form has already been checked, allow the submit.
-        if (!ownPassAuthenticated || form.getAttribute('data-ownpass-checked') === 'true') {
+        if (form.getAttribute('data-ownpass-checked') === 'true') {
+            return true;
+        }
+
+        if (!ownPassActivated) {
+            chrome.runtime.sendMessage(null, {
+                'cmd': 'ownpass-remind-unauthenticated'
+            });
+
             return true;
         }
 
@@ -153,12 +161,15 @@
     }
 
     submitForm = function (form) {
+        var inputs;
+
         form.setAttribute('data-ownpass-checked', true);
 
         if (form.submit instanceof Function) {
             form.submit();
         } else {
-            var inputs = document.forms[0].getElementsByTagName('input');
+            inputs = document.forms[0].getElementsByTagName('input');
+
             for (var i = 0; i < inputs.length; ++i) {
                 if (inputs[i].type === 'submit') {
                     inputs[i].click();
@@ -167,18 +178,31 @@
         }
     };
 
+    chrome.runtime.onMessage.addListener(function (msg, sender, callback) {
+        switch (msg.cmd) {
+            case 'ownpass-activated':
+                ownPassActivated = true;
+                break;
+
+            case 'ownpass-deactivated':
+                ownPassActivated = false;
+                break;
+
+            default:
+                break;
+        }
+
+        callback();
+    });
+
     document.addEventListener('DOMContentLoaded', function () {
         var forms = document.getElementsByTagName('form');
 
-        chrome.runtime.sendMessage(
-            null,
-            {
-                'cmd': 'ownpass-has-identity'
-            },
-            function (response) {
-                ownPassAuthenticated = response.authenticated;
-            }
-        );
+        chrome.runtime.sendMessage(null, {
+            'cmd': 'ownpass-has-identity'
+        }, function (response) {
+            ownPassActivated = response.authenticated;
+        });
 
         for (var i = 0; i < forms.length; ++i) {
             forms[i].addEventListener('submit', onFormSubmit);

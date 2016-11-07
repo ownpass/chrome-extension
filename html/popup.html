@@ -3,32 +3,61 @@
     <head>
         <meta charset="utf-8">
         <title></title>
-        <link href="../css/ownpass-chrome-extension.css" rel="stylesheet" type="text/css">
+        <link href="../css/ownpass-extension.css" rel="stylesheet" type="text/css">
     </head>
     <body>
 
-        <div class="op-model-box">
+        <div class="op-model-box" id="popup-screen">
+            <div class="op-model-box-title">
+                <h1>OwnPass</h1>
+            </div>
+
+            <div class="op-model-box-body">
+                <ul id="op-popup-menu">
+                    <li>
+                        <a href="" class="goto-vault-button">
+                            Vault
+                        </a>
+                    </li>
+                    <li>
+                        <a href="" class="goto-profile-button">
+                            Profile
+                        </a>
+                    </li>
+                    <li>
+                        <a href="" class="logout-button">
+                            Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="op-model-box" id="login-screen">
             <div class="op-model-box-title">
                 <h1>Login to OwnPass</h1>
             </div>
 
             <div class="op-model-box-body">
-                <form action="register-device.html" method="post">
-                    <p>
-                        <label for="server">Server</label>
-                        <span class="op-form-value">http://localhost/ownpass/ownpass/public</span>
-                        <input type="text" name="server" id="server">
-                    </p>
+                <form>
+                    <div class="op-form-row">
+                        <label for="login-server">Server</label>
+                        <!--<span class="op-form-value">http://localhost/ownpass/ownpass/public</span>-->
+                        <input type="text" name="server" id="login-server">
+                        <div class="op-form-error"></div>
+                    </div>
 
-                    <p>
-                        <label for="username">Username</label>
-                        <input type="text" name="username" id="username">
-                    </p>
+                    <div class="op-form-row">
+                        <label for="login-username">Username</label>
+                        <input type="text" name="username" id="login-username">
+                        <div class="op-form-error"></div>
+                    </div>
 
-                    <p>
-                        <label for="password">Password</label>
-                        <input type="password" name="password" id="password">
-                    </p>
+                    <div class="op-form-row">
+                        <label for="login-password">Password</label>
+                        <input type="password" name="password" id="login-password">
+                        <div class="op-form-error"></div>
+                    </div>
 
                     <div class="op-button-bar">
                         <button>
@@ -38,13 +67,146 @@
                         <div>
                             <small>
                                 Do you have trouble logging in?
-                                <a href="recover.html">Click here</a> to recover your credentials.
+                                <a href="" data-op-goto="recover-screen">Click here</a> to recover your credentials.
                             </small>
                         </div>
                     </div>
                 </form>
             </div>
         </div>
+
+        <div class="op-model-box" id="recover-screen">
+            <div class="op-model-box-title">
+                <h1>Recover Password</h1>
+            </div>
+
+            <div class="op-model-box-body">
+                <form>
+                    <p>
+                        <label for="recover-email">E-mail address</label>
+                        <input type="text" name="email" id="recover-email">
+                    </p>
+
+                    <div class="op-button-bar">
+                        <button>
+                            Recover
+                        </button>
+
+                        <div>
+                            <small>
+                                <a href="" data-op-goto="login-screen">Click here</a> to login.
+                            </small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="op-model-box" id="2fa-screen">
+            <div class="op-model-box-title">
+                <h1>Two-Factor Authentication</h1>
+            </div>
+
+            <div class="op-model-box-body">
+                <p>
+                    You have enabled two-factor authentication. This means you need to provide your verification code. Open
+                    your application of choice on your mobile phone to get this code.
+                </p>
+
+                <form>
+                    <p>
+                        <label for="2fa-code">Verification code</label>
+                        <input type="text" name="code" id="2fa-code">
+                    </p>
+
+                    <div class="op-button-bar">
+                        <button>
+                            Verify
+                        </button>
+
+                        <div>
+                            <small>
+                                <a href="" data-op-goto="login-screen">
+                                    Click here to go back to the login screen.
+                                </a>
+                            </small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="op-model-box" id="register-device-screen">
+            <div class="op-model-box-title">
+                <h1>Register Device</h1>
+            </div>
+
+            <div class="op-model-box-body">
+                <p>
+                    It appears you have not logged in on this device before. In order to continue, you need to
+                    verify this device. Please fill in the name and description of this device and press register.
+                    You will receive an e-mail where you can verify this device.
+                </p>
+
+                <form>
+                    <div class="op-form-row">
+                        <label for="register-device-description">Description</label>
+                        <input type="text" id="register-device-description">
+                        <div class="op-form-error"></div>
+                    </div>
+
+                    <div class="op-button-bar">
+                        <button>
+                            Register
+                        </button>
+
+                        <div>
+                            <small>
+                                <a href="" class="logout-button">Click here</a> to go back to the login
+                                screen or <a href="" data-op-goto="activate-device-screen">click here</a> to
+                                go enter a device activation code.
+                            </small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="op-model-box" id="activate-device-screen">
+            <div class="op-model-box-title">
+                <h1>Activate Device</h1>
+            </div>
+
+            <div class="op-model-box-body">
+                <p>
+                    We have sent you an e-mail containing an activation code. Please enter it below.
+                </p>
+
+                <form>
+                    <div class="op-form-row">
+                        <label for="activate-device-code">Activation code</label>
+                        <input type="text" id="activate-device-code">
+                        <div class="op-form-error"></div>
+                    </div>
+
+                    <div class="op-button-bar">
+                        <button>
+                            Activate
+                        </button>
+
+                        <div>
+                            <small>
+                                If you did not receive an activation code, you can
+                                <a href="" data-op-goto="register-device-screen">click here</a> to register
+                                your device again.
+                            </small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script src="../js/ownpass-extension-popup.min.js"></script>
 
     </body>
 </html>

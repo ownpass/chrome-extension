@@ -1,21 +1,36 @@
 module.exports = function (grunt) {
     grunt.initConfig({
         pkg: grunt.file.readJSON('package.json'),
-        browserify: {
-            dist: {
-                files: {
-                    'build/ng-compiled/ownpass-chrome-extension.js': [
-                        'build/ng-compiled/main.js'
-                    ]
-                }
-            }
-        },
         clean: {
             build: [
                 'build/unpacked/',
-                'build/packed/',
-                'build/ng-compiled/'
+                'build/packed/'
             ]
+        },
+        concat: {
+            options: {
+                separator: ";\n"
+            },
+            background: {
+                src: [
+                    'node_modules/jquery/dist/jquery.min.js',
+                    'js/background.js'
+                ],
+                dest: 'build/unpacked/js/ownpass-extension-background.js'
+            },
+            content: {
+                src: [
+                    'js/content.js'
+                ],
+                dest: 'build/unpacked/js/ownpass-extension-content.js'
+            },
+            popup: {
+                src: [
+                    'node_modules/jquery/dist/jquery.min.js',
+                    'js/popup.js'
+                ],
+                dest: 'build/unpacked/js/ownpass-extension-popup.js'
+            }
         },
         compress: {
             build: {
@@ -30,7 +45,7 @@ module.exports = function (grunt) {
                         cwd: 'build/unpacked/',
                         src: ['**'],
                         dest: ''
-                    },
+                    }
                 ]
             }
         },
@@ -60,40 +75,6 @@ module.exports = function (grunt) {
                         cwd: 'images/',
                         src: ['**'],
                         dest: 'build/unpacked/images'
-                    }
-                ]
-            },
-            js: {
-                files: [
-                    {
-                        expand: true,
-                        cwd: 'js/',
-                        src: ['**'],
-                        dest: 'build/unpacked/js'
-                    }
-                ]
-            },
-            libs: {
-                files: [
-                    {
-                        src: 'node_modules/jquery/dist/jquery.min.js',
-                        dest: 'build/unpacked/js/jquery.min.js'
-                    },
-                    {
-                        src: 'node_modules/zone.js/dist/zone.js',
-                        dest: 'build/unpacked/js/zone.js'
-                    },
-                    {
-                        src: 'node_modules/reflect-metadata/Reflect.js',
-                        dest: 'build/unpacked/js/Reflect.js'
-                    },
-                    {
-                        src: 'build/ng-compiled/ownpass-chrome-extension.js',
-                        dest: 'build/unpacked/js/ownpass-chrome-extension.js'
-                    },
-                    {
-                        src: 'build/ng-compiled/ownpass-chrome-extension.min.js',
-                        dest: 'build/unpacked/js/ownpass-chrome-extension.min.js'
                     }
                 ]
             },
@@ -131,29 +112,35 @@ module.exports = function (grunt) {
         sass: {
             build: {
                 options: {
-                    style: 'expanded',
+                    style: 'compressed',
                     loadPath: [
                         'node_modules/ownpass-pattern-library/scss/'
                     ]
                 },
                 files: {
-                    'build/unpacked/css/ownpass-chrome-extension.css': 'scss/application.scss'
+                    'build/unpacked/css/ownpass-extension.css': 'scss/application.scss'
                 }
             }
         },
-        ts: {
-            build: {
-                tsconfig: true
-            }
-        },
-        typings: {
-            install: {}
-        },
         uglify: {
-            build: {
+            background: {
                 files: {
-                    'build/ng-compiled/ownpass-chrome-extension.min.js': [
-                        'build/ng-compiled/ownpass-chrome-extension.js'
+                    'build/unpacked/js/ownpass-extension-background.min.js': [
+                        'build/unpacked/js/ownpass-extension-background.js'
+                    ]
+                }
+            },
+            content: {
+                files: {
+                    'build/unpacked/js/ownpass-extension-content.min.js': [
+                        'build/unpacked/js/ownpass-extension-content.js'
+                    ]
+                }
+            },
+            popup: {
+                files: {
+                    'build/unpacked/js/ownpass-extension-popup.min.js': [
+                        'build/unpacked/js/ownpass-extension-popup.js'
                     ]
                 }
             }
@@ -165,14 +152,13 @@ module.exports = function (grunt) {
                     '**/*.html',
                     '**/*.js',
                     '**/*.json',
-                    '**/*.ts',
                     'Gruntfile.js',
                     'package.json'
                 ],
                 tasks: ['build-unpacked'],
                 options: {
-                    spawn: false,
-                },
+                    spawn: false
+                }
             }
         }
     });
@@ -180,13 +166,12 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-browserify');
     grunt.loadNpmTasks('grunt-contrib-clean');
     grunt.loadNpmTasks('grunt-contrib-compress');
+    grunt.loadNpmTasks('grunt-contrib-concat');
     grunt.loadNpmTasks('grunt-contrib-copy');
     grunt.loadNpmTasks('grunt-contrib-jshint');
     grunt.loadNpmTasks('grunt-contrib-sass');
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-watch');
-    grunt.loadNpmTasks("grunt-ts");
-    grunt.loadNpmTasks('grunt-typings');
 
     grunt.registerTask('update-manifest', 'Updates the manifest file with the needed information.', function () {
         var manifest = grunt.file.readJSON('build/unpacked/manifest.json');
@@ -260,22 +245,15 @@ module.exports = function (grunt) {
     grunt.registerTask('build-unpacked', [
         'clean',
         'jshint',
-        'ts',
-        'browserify',
-        'sass',
-        'copy',
-        'update-manifest',
-    ]);
-
-    grunt.registerTask('build-packed', [
-        'clean',
-        'jshint',
-        'ts',
-        'browserify',
+        'concat',
         'uglify',
         'sass',
         'copy',
-        'update-manifest',
+        'update-manifest'
+    ]);
+
+    grunt.registerTask('build-packed', [
+        'build-unpacked',
     ]);
 
     grunt.registerTask('default', [

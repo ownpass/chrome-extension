@@ -16,10 +16,9 @@
     "background": {
         "persistent": true,
         "scripts": [
-            "js/background.js"
+            "js/ownpass-extension-background.min.js"
         ]
     },
-    "options_page": "html/options.html",
     "permissions": [
         "declarativeContent",
         "tabs",
@@ -55,7 +54,7 @@
                 "https://*/*"
             ],
             "js": [
-                "js/content.js"
+                "js/ownpass-extension-content.min.js"
             ]
         }
     ],
