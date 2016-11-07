@@ -14,22 +14,29 @@
 
             <div class="op-model-box-body">
                 <ul id="op-popup-menu">
-                    <li>
-                        <a href="" class="goto-vault-button">
+                    <!--<li>
+                        <a href="" data-op-open="https://ownpass.github.io">
                             Vault
                         </a>
                     </li>
                     <li>
-                        <a href="" class="goto-profile-button">
+                        <a href="" data-op-open="https://ownpass.github.io">
                             Profile
                         </a>
-                    </li>
+                    </li>-->
                     <li>
                         <a href="" class="logout-button">
                             Logout
                         </a>
                     </li>
                 </ul>
+
+                <div style="margin-top: 10px; text-align: center;">
+                    <small>
+                        You can make OwnPass forget about this device by
+                        <a href="" class="forget-device-button">clicking here</a>. This will also log you out.
+                    </small>
+                </div>
             </div>
         </div>
 
@@ -81,11 +88,23 @@
             </div>
 
             <div class="op-model-box-body">
+                <p>
+                    If your e-mail address is known to OwnPass, you will receive an e-mail with an activation code
+                    which can be used to reactivate your account.
+                </p>
+
                 <form>
-                    <p>
+                    <div class="op-form-row">
+                        <label for="recover-server">Server</label>
+                        <input type="text" name="recover-server" id="recover-server">
+                        <div class="op-form-error"></div>
+                    </div>
+
+                    <div class="op-form-row">
                         <label for="recover-email">E-mail address</label>
                         <input type="text" name="email" id="recover-email">
-                    </p>
+                        <div class="op-form-error"></div>
+                    </div>
 
                     <div class="op-button-bar">
                         <button>
@@ -94,7 +113,61 @@
 
                         <div>
                             <small>
-                                <a href="" data-op-goto="login-screen">Click here</a> to login.
+                                If you already have an activation code,
+                                <a href="" data-op-goto="activate-account-screen">click here</a> to enter it. Or
+                                <a href="" data-op-goto="login-screen">click here</a> to go back to the login screen.
+                            </small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="op-model-box" id="activate-account-screen">
+            <div class="op-model-box-title">
+                <h1>Activate Account</h1>
+            </div>
+
+            <div class="op-model-box-body">
+                <p>
+                    If you have received an activation code, you can activate your account here by filling in the code.
+                </p>
+
+                <form>
+                    <div class="op-form-row">
+                        <label for="activate-account-server">Server</label>
+                        <input type="text" name="activate-account-server" id="activate-account-server">
+                        <div class="op-form-error"></div>
+                    </div>
+
+                    <div class="op-form-row">
+                        <label for="activate-account-code">Activation code</label>
+                        <input type="text" name="activate-account-code" id="activate-account-code">
+                        <div class="op-form-error"></div>
+                    </div>
+
+                    <div class="op-form-row">
+                        <label for="activate-account-credential">New password</label>
+                        <input type="password" name="activate-account-credential" id="activate-account-credential">
+                        <div class="op-form-error"></div>
+                    </div>
+
+                    <div class="op-form-row">
+                        <label for="activate-account-validation">Validate password</label>
+                        <input type="password" name="activate-account-validation" id="activate-account-validation">
+                        <div class="op-form-error"></div>
+                    </div>
+
+                    <div class="op-button-bar">
+                        <button>
+                            Recover
+                        </button>
+
+                        <div>
+                            <small>
+                                <a href="" data-op-goto="login-screen">Click here</a> to login or
+                                <a href="" data-op-goto="recover-screen">click here</a> to recover access
+                                to your account again.
                             </small>
                         </div>
                     </div>
