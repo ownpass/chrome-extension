@@ -239,10 +239,6 @@ $(function () {
     hideScreens();
     bindCallbacks();
 
-    chrome.runtime.onMessage.addListener(function (msg, sender, callback) {
-        console.log('POPUP', msg, sender, callback);
-    });
-
     chrome.runtime.sendMessage(null, {
         'cmd': 'ownpass-has-identity'
     }, function (response) {

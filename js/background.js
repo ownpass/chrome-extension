@@ -266,14 +266,39 @@ function Handler() {
 
         return true;
     };
-}
 
-function handleFormSubmission(msg, sender, callback) {
-    console.log(msg);
-    console.log(sender);
-    console.log(callback);
+    this.formSubmit = function (msg, sender, callback) {
+        var token = JSON.parse(window.localStorage.getItem('oauth-token'));
+        var deviceIds = JSON.parse(window.localStorage.getItem('device-ids'));
 
-    callback();
+        $.ajax({
+            url: token.server + '/user/credential',
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token.access_token,
+                'Content-Type': 'application/json',
+                'X-OwnPass-Device': deviceIds[token.username].id
+            },
+            data: JSON.stringify({
+                raw_url: msg.url,
+                title: msg.title,
+                identity: 'TODO',
+                credential: 'TODO',
+                description: ''
+            }),
+            dataType: 'json',
+            error: function (jqXHR) {
+                console.log(jqXHR);
+                callback();
+            },
+            success: function (data) {
+                console.log(data);
+                callback();
+            }
+        });
+
+        return true;
+    };
 }
 
 handler = new Handler();
@@ -283,8 +308,7 @@ chrome.runtime.onMessage.addListener(function (msg, sender, callback) {
 
     switch (msg.cmd) {
         case 'ownpass-document-form-submit':
-            handleFormSubmission(msg, sender, callback);
-            callback();
+            result = handler.formSubmit(msg, sender, callback);
             break;
 
         case 'ownpass-remind-unauthenticated':
