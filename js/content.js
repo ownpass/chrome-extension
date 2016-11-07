@@ -125,6 +125,10 @@
             return true;
         }
 
+        if (document.querySelectorAll('[type="password"]').length === 0) {
+            return true;
+        }
+
         e.preventDefault();
 
         ownPassTopBar = createTopBar(

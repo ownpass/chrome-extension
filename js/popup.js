@@ -200,7 +200,6 @@ $(function () {
                 'code': code,
                 'credential': credential
             }, function (response) {
-                console.log(response);
                 if (response.error) {
                     validationField.next('.op-form-error').show().text(response.error);
                 } else {
@@ -247,8 +246,6 @@ $(function () {
     chrome.runtime.sendMessage(null, {
         'cmd': 'ownpass-has-identity'
     }, function (response) {
-        console.log(response);
-
         if (response.deviceActivated) {
             activateScreen('popup-screen');
         } else if (response.deviceId) {

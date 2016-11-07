@@ -235,7 +235,6 @@ function Handler() {
                 });
             },
             success: function (data) {
-                console.log(data);
                 callback(data);
             }
         });
