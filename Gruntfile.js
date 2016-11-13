@@ -148,10 +148,10 @@ module.exports = function (grunt) {
         watch: {
             build: {
                 files: [
-                    '**/*.css',
-                    '**/*.html',
-                    '**/*.js',
-                    '**/*.json',
+                    'html/**/*.html',
+                    'js/**/*.js',
+                    'scss/**/*.scss',
+                    'manifest.json',
                     'Gruntfile.js',
                     'package.json'
                 ],

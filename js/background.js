@@ -1,14 +1,217 @@
-var remindedUnauthenticated = false, handler;
+var remindedUnauthenticated = false;
+var handler, menuBuilder;
+var credentialsCache = null;
 
-function sendMessageToContent(msg) {
-    chrome.tabs.query({
-        active: true,
-        currentWindow: true
-    }, function (tabs) {
+function sendMessageToContent(msg, options) {
+    options = options || {};
+
+    chrome.tabs.query(options, function (tabs) {
         for (var i = 0; i < tabs.length; ++i) {
             chrome.tabs.sendMessage(tabs[i].id, msg);
         }
     });
+}
+
+
+function loadCredentials() {
+    var token = JSON.parse(window.localStorage.getItem('oauth-token'));
+    var deviceIds = JSON.parse(window.localStorage.getItem('device-ids'));
+
+    var executeSynchronizationRequest = function (url) {
+        $.ajax({
+            url: url,
+            method: 'GET',
+            headers: {
+                'Authorization': token.token_type + ' ' + token.access_token,
+                'X-OwnPass-Device': deviceIds[token.username].id
+            },
+            dataType: 'json',
+            success: function (data) {
+                var link = document.createElement('a');
+
+                for (var i = 0; i < data._embedded.user_credential.length; ++i) {
+                    link.href = data._embedded.user_credential[i].urlRaw;
+
+                    credentialsCache.push({
+                        host: link.hostname,
+                        identity: data._embedded.user_credential[i].identity,
+                        credential: data._embedded.user_credential[i].credential
+                    });
+                }
+
+                if (data._links.next) {
+                    executeSynchronizationRequest(data._links.next);
+                } else {
+                    menuBuilder.update();
+
+                    sendMessageToContent({
+                        cmd: 'ownpass-provide-credentials',
+                        credentials: credentialsCache
+                    });
+                }
+            }
+        });
+    };
+
+    if (credentialsCache !== null || token === null) {
+        return false;
+    }
+
+    credentialsCache = [];
+    executeSynchronizationRequest(token.server + '/user/credential');
+    return true;
+}
+
+function MenuBuilder() {
+    var contextMenuId,
+        useId,
+        copyUsernameId,
+        copyPasswordId,
+        useList = [],
+        copyUsernameList = [],
+        copyPasswordList = [];
+
+    var setItemEnabled = function (id, enabled) {
+        chrome.contextMenus.update(id, {
+            enabled: enabled
+        });
+    };
+
+    var deleteItems = function (list) {
+        for (var i = 0; i < list.length; ++i) {
+            chrome.contextMenus.remove(list[i].id);
+        }
+    };
+
+    var onUse = function(info) {
+        for (var i = 0; i < useList.length; ++i) {
+            if (useList[i].id === info.menuItemId) {
+                sendMessageToContent({
+                    cmd: 'ownpass-use',
+                    identity: useList[i].identity,
+                    credential: useList[i].credential
+                }, {
+                    active: true
+                });
+
+                break;
+            }
+        }
+    };
+
+    var onCopyUsername = function(info) {
+        for (var i = 0; i < copyUsernameList.length; ++i) {
+            if (copyUsernameList[i].id === info.menuItemId) {
+                sendMessageToContent({
+                    cmd: 'ownpass-copy-username',
+                    value: copyUsernameList[i].value
+                }, {
+                    active: true
+                });
+
+                break;
+            }
+        }
+    };
+
+    var onCopyPassword = function(info) {
+        for (var i = 0; i < copyPasswordList.length; ++i) {
+            if (copyPasswordList[i].id === info.menuItemId) {
+                sendMessageToContent({
+                    cmd: 'ownpass-copy-password',
+                    value: copyPasswordList[i].value
+                }, {
+                    active: true
+                });
+
+                break;
+            }
+        }
+    };
+
+    this.update = function () {
+        var hasCredentials = credentialsCache !== null && credentialsCache.length > 0;
+        var token = window.localStorage.getItem('oauth-token');
+
+        if (!contextMenuId) {
+            contextMenuId = chrome.contextMenus.create({
+                title: 'OwnPass',
+                contexts: ['editable']
+            });
+        }
+
+        if (!useId) {
+            useId = chrome.contextMenus.create({
+                parentId: contextMenuId,
+                contexts: ['all'],
+                title: 'Use'
+            });
+        }
+
+        if (!copyUsernameId) {
+            copyUsernameId = chrome.contextMenus.create({
+                parentId: contextMenuId,
+                contexts: ['all'],
+                title: 'Copy username'
+            });
+        }
+
+        if (!copyPasswordId) {
+            copyPasswordId = chrome.contextMenus.create({
+                parentId: contextMenuId,
+                contexts: ['all'],
+                title: 'Copy password'
+            });
+        }
+
+        setItemEnabled(contextMenuId, token !== null);
+        setItemEnabled(useId, hasCredentials);
+        setItemEnabled(copyUsernameId, hasCredentials);
+        setItemEnabled(copyPasswordId, hasCredentials);
+
+        deleteItems(useList);
+        deleteItems(copyUsernameList);
+        deleteItems(copyPasswordList);
+
+        useList = [];
+        copyUsernameList = [];
+        copyPasswordList = [];
+
+        if (hasCredentials) {
+            for (var i = 0; i < credentialsCache.length; ++i) {
+                useList.push({
+                    id: chrome.contextMenus.create({
+                        parentId: useId,
+                        contexts: ['all'],
+                        title: credentialsCache[i].identity,
+                        onclick: onUse
+                    }),
+                    identity: credentialsCache[i].identity,
+                    credential: credentialsCache[i].credential
+                });
+
+                copyUsernameList.push({
+                    id: chrome.contextMenus.create({
+                        parentId: copyUsernameId,
+                        contexts: ['all'],
+                        title: credentialsCache[i].identity,
+                        onclick: onCopyUsername
+                    }),
+                    value: credentialsCache[i].identity
+                });
+
+                copyPasswordList.push({
+                    id: chrome.contextMenus.create({
+                        parentId: copyPasswordId,
+                        contexts: ['all'],
+                        title: credentialsCache[i].identity,
+                        onclick: onCopyPassword
+                    }),
+                    value: credentialsCache[i].credential
+                });
+            }
+        }
+    };
 }
 
 function Handler() {
@@ -65,7 +268,7 @@ function Handler() {
         return false;
     };
 
-    this.login = function (msg, sender, callback) {
+    var retrieveOAuthToken = function(msg, callback) {
         $.ajax({
             url: msg.server + '/oauth',
             method: 'POST',
@@ -81,7 +284,7 @@ function Handler() {
             dataType: 'json',
             error: function (jqXHR) {
                 callback({
-                    error: jqXHR.responseJSON.error_description
+                    error: jqXHR.responseJSON ? jqXHR.responseJSON.error_description : 'Cannot connect to the server'
                 });
             },
             success: function (data) {
@@ -101,14 +304,40 @@ function Handler() {
 
                 if (deviceActivated) {
                     sendMessageToContent({
-                        cmd: 'ownpass-activated'
+                        cmd: 'ownpass-update-state',
+                        state: 'activated'
                     });
                 }
+
+                menuBuilder.update();
 
                 callback({
                     deviceActivated: deviceActivated,
                     deviceId: deviceId,
                     token: data
+                });
+            }
+        });
+    };
+
+    this.login = function (msg, sender, callback) {
+        var url = msg.server.replace(/\/$/, '') + '/config.json';
+
+        $.ajax({
+            url: url,
+            dataType: 'json',
+            success: function (data) {
+                msg.server = data.server_url;
+
+                retrieveOAuthToken(msg, function(data) {
+                    loadCredentials();
+
+                    callback(data);
+                });
+            },
+            error: function (jqXHR) {
+                callback({
+                    error: jqXHR.responseJSON ? jqXHR.responseJSON.error_description : 'Cannot connect to the server'
                 });
             }
         });
@@ -120,8 +349,12 @@ function Handler() {
         window.localStorage.removeItem('oauth-token');
 
         sendMessageToContent({
-            cmd: 'ownpass-deactivated'
+            cmd: 'ownpass-update-state',
+            state: 'deactivated'
         });
+
+        credentialsCache = null;
+        menuBuilder.update();
 
         callback();
 
@@ -267,9 +500,39 @@ function Handler() {
         return true;
     };
 
+    this.loadDocument = function (msg, sender, callback) {
+        sendMessageToContent({
+            cmd: 'ownpass-provide-credentials',
+            credentials: credentialsCache
+        });
+
+        callback();
+        return false;
+    };
+
     this.formSubmit = function (msg, sender, callback) {
         var token = JSON.parse(window.localStorage.getItem('oauth-token'));
         var deviceIds = JSON.parse(window.localStorage.getItem('device-ids'));
+        var link = document.createElement('a');
+
+        link.href = msg.url;
+
+        for (var i = 0; i < credentialsCache.length; ++i) {
+            if (credentialsCache[i].host === link.hostname &&
+                credentialsCache[i].identity === msg.identity &&
+                credentialsCache[i].credential === msg.credential) {
+                // The credential already exists.
+                return;
+            }
+        }
+
+        credentialsCache.push({
+            host: link.hostname,
+            identity: msg.identity,
+            credential: msg.credential
+        });
+
+        menuBuilder.update();
 
         $.ajax({
             url: token.server + '/user/credential',
@@ -282,17 +545,12 @@ function Handler() {
             data: JSON.stringify({
                 raw_url: msg.url,
                 title: msg.title,
-                identity: 'TODO',
-                credential: 'TODO',
+                identity: msg.identity,
+                credential: msg.credential,
                 description: ''
             }),
             dataType: 'json',
-            error: function (jqXHR) {
-                console.log(jqXHR);
-                callback();
-            },
-            success: function (data) {
-                console.log(data);
+            complete: function () {
                 callback();
             }
         });
@@ -301,12 +559,19 @@ function Handler() {
     };
 }
 
+menuBuilder = new MenuBuilder();
+menuBuilder.update();
+
 handler = new Handler();
 
 chrome.runtime.onMessage.addListener(function (msg, sender, callback) {
     var result = false;
 
     switch (msg.cmd) {
+        case 'ownpass-document-load':
+            result = handler.loadDocument(msg, sender, callback);
+            break;
+
         case 'ownpass-document-form-submit':
             result = handler.formSubmit(msg, sender, callback);
             break;
@@ -350,3 +615,5 @@ chrome.runtime.onMessage.addListener(function (msg, sender, callback) {
 
     return result;
 });
+
+loadCredentials();
