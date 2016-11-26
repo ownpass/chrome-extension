@@ -57,6 +57,26 @@ $(function () {
             activateScreen('login-screen');
         });
 
+        $('.vault-button').on('click', function (e) {
+            e.preventDefault();
+
+            chrome.runtime.sendMessage(null, {
+                'cmd': 'ownpass-get-identity'
+            }, function (response) {
+                chrome.tabs.create({
+                    url: response.control_panel
+                });
+            });
+        });
+
+        $('[data-op-open]').on('click', function (e) {
+            e.preventDefault();
+
+            chrome.tabs.create({
+                url: $(this).data('op-open')
+            });
+        });
+
         $('[data-op-goto]').on('click', function (e) {
             e.preventDefault();
 
@@ -124,9 +144,13 @@ $(function () {
             chrome.runtime.sendMessage(null, {
                 'cmd': 'ownpass-register-device',
                 'description': description
+            }, function(response) {
+                if (response.status && response.status === 401) {
+                    activateScreen('login-screen');
+                } else {
+                    activateScreen('activate-device-screen');
+                }
             });
-
-            activateScreen('activate-device-screen');
         });
 
         $('#recover-screen form').on('submit', function (e) {
@@ -238,6 +262,19 @@ $(function () {
 
     hideScreens();
     bindCallbacks();
+
+    chrome.runtime.onMessage.addListener(function (msg, sender, callback) {
+        switch (msg.cmd) {
+            case 'ownpass-activate-screen':
+                activateScreen(msg.screen);
+                break;
+
+            default:
+                break;
+        }
+
+        callback();
+    });
 
     chrome.runtime.sendMessage(null, {
         'cmd': 'ownpass-has-identity'

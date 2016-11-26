@@ -89,12 +89,15 @@ module.exports = function (grunt) {
         },
         crx: {
             build: {
-                "src": "build/unpacked/",
-                "crx": "build/packed/<%= pkg.name %>.crx",
-                "privateKey": "<%= pkg.name %>.pem",
-                "publicKey": "build/packed/<%= pkg.name %>.pub",
-                "zip": "build/packed/<%= pkg.name %>.zip"
+                'src': 'build/unpacked/',
+                'crx': 'build/packed/<%= pkg.name %>.crx',
+                'privateKey': '<%= pkg.name %>.pem',
+                'publicKey': 'build/packed/<%= pkg.name %>.pub',
+                'zip': 'build/packed/<%= pkg.name %>.zip'
             }
+        },
+        exec: {
+            'browserify-worker': 'browserify js/worker.js -o build/unpacked/js/ownpass-extension-worker.js'
         },
         jshint: {
             options: grunt.file.readJSON('jshint.json'),
@@ -163,7 +166,6 @@ module.exports = function (grunt) {
         }
     });
 
-    grunt.loadNpmTasks('grunt-browserify');
     grunt.loadNpmTasks('grunt-contrib-clean');
     grunt.loadNpmTasks('grunt-contrib-compress');
     grunt.loadNpmTasks('grunt-contrib-concat');
@@ -172,6 +174,7 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-contrib-sass');
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-watch');
+    grunt.loadNpmTasks('grunt-exec');
 
     grunt.registerTask('update-manifest', 'Updates the manifest file with the needed information.', function () {
         var manifest = grunt.file.readJSON('build/unpacked/manifest.json');
@@ -206,7 +209,7 @@ module.exports = function (grunt) {
         } else {
             grunt.log.writeln('Writing private key to ' + this.data.privateKey);
 
-            privateRsaKey = new NodeRSA({b: 2048});
+            privateRsaKey = new NodeRSA({b: 4096});
             privateKey = privateRsaKey.exportKey('pkcs8-private');
             publicKey = privateRsaKey.exportKey('pkcs8-public-der');
 
@@ -246,6 +249,7 @@ module.exports = function (grunt) {
         'clean',
         'jshint',
         'concat',
+        'exec:browserify-worker',
         'uglify',
         'sass',
         'copy',
@@ -254,9 +258,12 @@ module.exports = function (grunt) {
 
     grunt.registerTask('build-packed', [
         'build-unpacked',
+        'compress',
+        'crx'
     ]);
 
     grunt.registerTask('default', [
+        'build-unpacked',
         'build-packed'
     ]);
 };

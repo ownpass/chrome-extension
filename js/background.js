@@ -1,6 +1,7 @@
 var remindedUnauthenticated = false;
 var handler, menuBuilder;
 var credentialsCache = null;
+var worker = new Worker(chrome.extension.getURL('js/ownpass-extension-worker.js'));
 
 function sendMessageToContent(msg, options) {
     options = options || {};
@@ -12,6 +13,34 @@ function sendMessageToContent(msg, options) {
     });
 }
 
+function logout() {
+    window.localStorage.removeItem('oauth-token');
+
+    chrome.runtime.sendMessage(null, {
+        'cmd': 'ownpass-activate-screen',
+        'screen': 'login-screen'
+    });
+
+    sendMessageToContent({
+        cmd: 'ownpass-update-state',
+        state: 'deactivated'
+    });
+
+    credentialsCache = null;
+    menuBuilder.update();
+}
+
+function loadPing() {
+    var interval = 1000 * 60 * 30; // Every 30 minutes
+
+    setInterval(function() {
+        handler.ping({}, {}, function (response) {
+            if (!response.authenticated) {
+                logout();
+            }
+        });
+    }, interval);
+}
 
 function loadCredentials() {
     var token = JSON.parse(window.localStorage.getItem('oauth-token'));
@@ -26,6 +55,20 @@ function loadCredentials() {
                 'X-OwnPass-Device': deviceIds[token.username].id
             },
             dataType: 'json',
+            error: function (jqXHR) {
+                console.error('An error did occur during the request:', jqXHR);
+
+                if (jqXHR.status === 401) {
+                    logout();
+                }
+
+                credentialsCache = [];
+
+                sendMessageToContent({
+                    cmd: 'ownpass-provide-credentials',
+                    credentials: []
+                });
+            },
             success: function (data) {
                 var link = document.createElement('a');
 
@@ -33,6 +76,7 @@ function loadCredentials() {
                     link.href = data._embedded.user_credential[i].urlRaw;
 
                     credentialsCache.push({
+                        id: data._embedded.user_credential[i].id,
                         host: link.hostname,
                         identity: data._embedded.user_credential[i].identity,
                         credential: data._embedded.user_credential[i].credential
@@ -53,7 +97,7 @@ function loadCredentials() {
         });
     };
 
-    if (credentialsCache !== null || token === null) {
+    if (credentialsCache !== null || token === null || !deviceIds || !deviceIds[token.username]) {
         return false;
     }
 
@@ -67,7 +111,10 @@ function MenuBuilder() {
         useId,
         copyUsernameId,
         copyPasswordId,
+        removeId,
+        removeAllId,
         useList = [],
+        removeList = [],
         copyUsernameList = [],
         copyPasswordList = [];
 
@@ -83,7 +130,7 @@ function MenuBuilder() {
         }
     };
 
-    var onUse = function(info) {
+    var onUse = function (info) {
         for (var i = 0; i < useList.length; ++i) {
             if (useList[i].id === info.menuItemId) {
                 sendMessageToContent({
@@ -99,7 +146,7 @@ function MenuBuilder() {
         }
     };
 
-    var onCopyUsername = function(info) {
+    var onCopyUsername = function (info) {
         for (var i = 0; i < copyUsernameList.length; ++i) {
             if (copyUsernameList[i].id === info.menuItemId) {
                 sendMessageToContent({
@@ -114,7 +161,7 @@ function MenuBuilder() {
         }
     };
 
-    var onCopyPassword = function(info) {
+    var onCopyPassword = function (info) {
         for (var i = 0; i < copyPasswordList.length; ++i) {
             if (copyPasswordList[i].id === info.menuItemId) {
                 sendMessageToContent({
@@ -127,6 +174,18 @@ function MenuBuilder() {
                 break;
             }
         }
+    };
+
+    var onRemove = function (info) {
+        console.log(info);
+    };
+
+    var onRemoveAll = function (info) {
+        for (var i = 0; i < credentialsCache.length; ++i) {
+            console.log(credentialsCache[i]);
+        }
+        credentialsCache = [];
+        console.log(info);
     };
 
     this.update = function () {
@@ -164,18 +223,39 @@ function MenuBuilder() {
             });
         }
 
+        if (!removeId) {
+            removeId = chrome.contextMenus.create({
+                parentId: contextMenuId,
+                contexts: ['all'],
+                title: 'Remove'
+            });
+        }
+
+        if (!removeAllId) {
+            removeAllId = chrome.contextMenus.create({
+                parentId: contextMenuId,
+                contexts: ['all'],
+                title: 'Remove all',
+                onclick: onRemoveAll
+            });
+        }
+
         setItemEnabled(contextMenuId, token !== null);
         setItemEnabled(useId, hasCredentials);
         setItemEnabled(copyUsernameId, hasCredentials);
         setItemEnabled(copyPasswordId, hasCredentials);
+        setItemEnabled(removeId, hasCredentials);
+        setItemEnabled(removeAllId, hasCredentials);
 
         deleteItems(useList);
         deleteItems(copyUsernameList);
         deleteItems(copyPasswordList);
+        deleteItems(removeList);
 
         useList = [];
         copyUsernameList = [];
         copyPasswordList = [];
+        removeList = [];
 
         if (hasCredentials) {
             for (var i = 0; i < credentialsCache.length; ++i) {
@@ -209,6 +289,16 @@ function MenuBuilder() {
                     }),
                     value: credentialsCache[i].credential
                 });
+
+                removeList.push({
+                    id: chrome.contextMenus.create({
+                        parentId: removeId,
+                        contexts: ['all'],
+                        title: credentialsCache[i].identity,
+                        onclick: onRemove
+                    }),
+                    value: i
+                });
             }
         }
     };
@@ -235,6 +325,14 @@ function Handler() {
         }, 3000);
 
         callback();
+
+        return false;
+    };
+
+    this.getIdentity = function (msg, sender, callback) {
+        var token = JSON.parse(window.localStorage.getItem('oauth-token'));
+
+        callback(token);
 
         return false;
     };
@@ -268,7 +366,40 @@ function Handler() {
         return false;
     };
 
-    var retrieveOAuthToken = function(msg, callback) {
+    this.ping = function (msg, sender, callback) {
+        var token = JSON.parse(window.localStorage.getItem('oauth-token'));
+
+        $.ajax({
+            url: token.server + '/ping',
+            method: 'GET',
+            headers: {
+                'Authorization': token.token_type + ' ' + token.access_token
+            },
+            dataType: 'json',
+            error: function (jqXHR) {
+                console.error('An error did occur during the request:', jqXHR);
+
+                if (jqXHR.status === 401) {
+                    logout();
+                }
+
+                callback({
+                    authenticated: false,
+                    jqXhr: jqXHR
+                });
+            },
+            success: function (data) {
+                callback({
+                    authenticated: true,
+                    data: data
+                });
+            }
+        });
+
+        return true;
+    };
+
+    var retrieveOAuthToken = function (msg, callback) {
         $.ajax({
             url: msg.server + '/oauth',
             method: 'POST',
@@ -283,6 +414,12 @@ function Handler() {
             }),
             dataType: 'json',
             error: function (jqXHR) {
+                console.error('An error did occur during the request:', jqXHR);
+
+                if (jqXHR.status === 401) {
+                    logout();
+                }
+
                 callback({
                     error: jqXHR.responseJSON ? jqXHR.responseJSON.error_description : 'Cannot connect to the server'
                 });
@@ -290,6 +427,7 @@ function Handler() {
             success: function (data) {
                 var deviceIds, deviceId, deviceActivated = false;
 
+                data.control_panel = msg.control_panel;
                 data.server = msg.server;
                 data.username = msg.username;
 
@@ -321,23 +459,85 @@ function Handler() {
     };
 
     this.login = function (msg, sender, callback) {
-        var url = msg.server.replace(/\/$/, '') + '/config.json';
+        var serverUrl = msg.server.replace(/\/$/, '');
+        var configUrl = serverUrl + '/assets/config.json';
 
         $.ajax({
-            url: url,
+            url: configUrl,
             dataType: 'json',
             success: function (data) {
+                msg.control_panel = serverUrl;
                 msg.server = data.server_url;
 
-                retrieveOAuthToken(msg, function(data) {
+                retrieveOAuthToken(msg, function (data) {
                     loadCredentials();
 
                     callback(data);
                 });
             },
             error: function (jqXHR) {
+                var errorMsg;
+
+                console.error('An error did occur during the request:', jqXHR);
+
+                if (jqXHR.status === 401) {
+                    logout();
+                }
+
+                if (jqXHR.responseJSON && jqXHR.responseJSON.error_description) {
+                    errorMsg = jqXHR.responseJSON.error_description;
+                } else {
+                    errorMsg = 'Cannot connect to the server';
+                }
+
                 callback({
-                    error: jqXHR.responseJSON ? jqXHR.responseJSON.error_description : 'Cannot connect to the server'
+                    error: errorMsg
+                });
+            }
+        });
+
+        return true;
+    };
+
+    this.loginRefresh = function (msg, sender, callback) {
+        var token = JSON.parse(window.localStorage.getItem('oauth-token'));
+
+        if (!token) {
+            callback({
+                authenticated: false
+            });
+            return false;
+        }
+
+        $.ajax({
+            url: token.server + '/oauth',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify({
+                grant_type: 'refresh_token',
+                refresh_token: token.refresh_token,
+                client_id: 'chrome-extension'
+            }),
+            dataType: 'json',
+            error: function (jqXHR) {
+                console.error('An error did occur during the request:', jqXHR);
+
+                logout();
+
+                callback({
+                    authenticated: false
+                });
+            },
+            success: function (data) {
+                token.access_token = data.access_token;
+                token.refresh_token = data.refresh_token;
+
+                window.localStorage.setItem('oauth-token', JSON.stringify(token));
+
+                callback({
+                    authenticated: true
                 });
             }
         });
@@ -346,15 +546,7 @@ function Handler() {
     };
 
     this.logout = function (msg, sender, callback) {
-        window.localStorage.removeItem('oauth-token');
-
-        sendMessageToContent({
-            cmd: 'ownpass-update-state',
-            state: 'deactivated'
-        });
-
-        credentialsCache = null;
-        menuBuilder.update();
+        logout();
 
         callback();
 
@@ -387,6 +579,12 @@ function Handler() {
             }),
             dataType: 'json',
             error: function (jqXHR) {
+                console.error('An error did occur during the request:', jqXHR);
+
+                if (jqXHR.status === 401) {
+                    logout();
+                }
+
                 callback({
                     error: jqXHR.responseJSON.detail
                 });
@@ -424,9 +622,23 @@ function Handler() {
             }),
             dataType: 'json',
             error: function (jqXHR) {
+                var error;
+
+                console.error('An error did occur during the request:', jqXHR);
+
+                if (jqXHR.status === 401) {
+                    logout();
+                }
+
+                if (jqXHR.responseJSON && jqXHR.responseJSON.error_description) {
+                    error = jqXHR.responseJSON.error_description;
+                } else {
+                    error = 'An error did occur.';
+                }
+
                 callback({
                     status: jqXHR.status,
-                    error: jqXHR.responseJSON.error_description
+                    error: error
                 });
             },
             success: function (data) {
@@ -446,7 +658,7 @@ function Handler() {
                 });
             }
         });
-        return false;
+        return true;
     };
 
     this.activateAccount = function (msg, sender, callback) {
@@ -462,6 +674,12 @@ function Handler() {
             }),
             dataType: 'json',
             error: function (jqXHR) {
+                console.error('An error did occur during the request:', jqXHR);
+
+                if (jqXHR.status === 401) {
+                    logout();
+                }
+
                 callback({
                     status: jqXHR.status,
                     error: jqXHR.responseJSON.detail
@@ -487,6 +705,12 @@ function Handler() {
             }),
             dataType: 'json',
             error: function (jqXHR) {
+                console.error('An error did occur during the request:', jqXHR);
+
+                if (jqXHR.status === 401) {
+                    logout();
+                }
+
                 callback({
                     status: jqXHR.status,
                     error: jqXHR.responseJSON.error_description
@@ -550,8 +774,21 @@ function Handler() {
                 description: ''
             }),
             dataType: 'json',
-            complete: function () {
-                callback();
+            error: function(jqXHR) {
+                console.error('An error did occur during the request:', jqXHR);
+
+                if (jqXHR.status === 401) {
+                    logout();
+                }
+
+                callback({
+                    authenticated: false
+                });
+            },
+            success: function () {
+                callback({
+                    authenticated: true
+                });
             }
         });
 
@@ -564,10 +801,32 @@ menuBuilder.update();
 
 handler = new Handler();
 
+worker.addEventListener('message', function (e) {
+    var cmd = e.data.cmd || null;
+
+    switch (cmd) {
+        case 'encrypt':
+            console.log('Encrypted result: ' + e.data.result, e.data);
+            break;
+
+        case 'decrypt':
+            console.log('Decrypted result: ' + e.data.result, e.data);
+            break;
+
+        default:
+            console.error('Invalid command recieved from worker: ' + cmd);
+            break;
+    }
+}, false);
+
 chrome.runtime.onMessage.addListener(function (msg, sender, callback) {
     var result = false;
 
     switch (msg.cmd) {
+        case 'ownpass-ping':
+            result = handler.ping(msg, sender, callback);
+            break;
+
         case 'ownpass-document-load':
             result = handler.loadDocument(msg, sender, callback);
             break;
@@ -580,12 +839,20 @@ chrome.runtime.onMessage.addListener(function (msg, sender, callback) {
             result = handler.displayReminder(msg, sender, callback);
             break;
 
+        case 'ownpass-get-identity':
+            result = handler.getIdentity(msg, sender, callback);
+            break;
+
         case 'ownpass-has-identity':
             result = handler.hasIdentity(msg, sender, callback);
             break;
 
         case 'ownpass-login':
             result = handler.login(msg, sender, callback);
+            break;
+
+        case 'ownpass-login-refresh':
+            result = handler.loginRefresh(msg, sender, callback);
             break;
 
         case 'ownpass-logout':
@@ -617,3 +884,6 @@ chrome.runtime.onMessage.addListener(function (msg, sender, callback) {
 });
 
 loadCredentials();
+loadPing();
+
+logout();
