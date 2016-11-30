@@ -145,10 +145,18 @@ $(function () {
                 'cmd': 'ownpass-register-device',
                 'description': description
             }, function(response) {
-                if (response.status && response.status === 401) {
-                    activateScreen('login-screen');
-                } else {
-                    activateScreen('activate-device-screen');
+                switch (response.status) {
+                    case 200:
+                        activateScreen('activate-device-screen');
+                        break;
+
+                    case 401:
+                        activateScreen('login-screen');
+                        break;
+
+                    default:
+                        descriptionField.next('.op-form-error').show().text(response.error);
+                        break;
                 }
             });
         });

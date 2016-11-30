@@ -630,10 +630,12 @@ function Handler() {
                     logout();
                 }
 
-                if (jqXHR.responseJSON && jqXHR.responseJSON.error_description) {
-                    error = jqXHR.responseJSON.error_description;
-                } else {
+                if (!jqXHR.responseJSON) {
                     error = 'An error did occur.';
+                } else if (jqXHR.responseJSON.error_description) {
+                    error = jqXHR.responseJSON.error_description;
+                } else if (jqXHR.responseJSON.detail) {
+                    error = jqXHR.responseJSON.detail;
                 }
 
                 callback({
@@ -654,6 +656,7 @@ function Handler() {
                 window.localStorage.setItem('device-ids', JSON.stringify(deviceIds));
 
                 callback({
+                    status: 200,
                     deviceId: data.id
                 });
             }
