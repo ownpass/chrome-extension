@@ -3,6 +3,104 @@ var handler, menuBuilder;
 var credentialsCache = null;
 var worker = new Worker(chrome.extension.getURL('js/ownpass-extension-worker.js'));
 
+/* jshint ignore:start */
+function ownpassdebug() {
+    var token = JSON.parse(window.localStorage.getItem('oauth-token'));
+    var deviceIds = JSON.parse(window.localStorage.getItem('device-ids'));
+
+    console.log('Deugging information about OwnPass.');
+
+    console.log('- Token', token);
+    console.log('- Devices', deviceIds);
+    console.log('- Credentials', credentialsCache);
+}
+/* jshint ignore:end */
+
+function aesEncrypt(password, msg) {
+    // Get a 16 byte salt:
+    var salt = CryptoJS.lib.WordArray.random(16);
+
+    // Create a PBKDF2 hash:
+    var hashSize = 8;
+    var hash = CryptoJS.PBKDF2(password, salt, {
+        iterations: 5000,
+        hasher: CryptoJS.algo.SHA256,
+        keySize: hashSize * 2
+    });
+
+    // Extract the encryption key and the HMAC key:
+    var keyAES = CryptoJS.lib.WordArray.create(hash.words.slice(0, hashSize));
+    var keyHMAC = CryptoJS.lib.WordArray.create(hash.words.slice(hashSize));
+
+    // Encryption the message:
+    var encrypted = CryptoJS.AES.encrypt(msg, keyAES, {
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7,
+        hasher: CryptoJS.algo.SHA256,
+        iv: salt
+    });
+
+    var cipherText = CryptoJS.lib.WordArray.create(encrypted.iv.words);
+    cipherText.concat(encrypted.ciphertext);
+
+    // Create the cipher text that we are going to create a HMAC value for:
+    var hmacStr = CryptoJS.enc.Latin1.parse('aes');
+    hmacStr.concat(cipherText);
+
+    var hmac = CryptoJS.HmacSHA256(hmacStr, keyHMAC);
+
+    var result = hmac.toString(CryptoJS.enc.Hex) + cipherText.toString(CryptoJS.enc.Base64);
+
+    return result;
+}
+
+function aesDecrypt(password, encrypted) {
+    var hmac = encrypted.substr(0, 64);
+    var cipherText = encrypted.substr(64);
+
+    var decoded = CryptoJS.enc.Base64.parse(cipherText);
+    var decodedHex = decoded.toString(CryptoJS.enc.Hex).substr(0, 16 * 2); // IV is 16 bytes
+    var decodedCipher = decoded.toString(CryptoJS.enc.Hex).substr(16 * 2); // IV is 16 bytes
+
+    var iv = CryptoJS.enc.Hex.parse(decodedHex);
+
+    // Create a PBKDF2 hash:
+    var hashSize = 8;
+    var hash = CryptoJS.PBKDF2(password, iv, {
+        iterations: 5000,
+        hasher: CryptoJS.algo.SHA256,
+        keySize: hashSize * 2,
+        salt: iv
+    });
+
+    // Extract the encryption key and the HMAC key:
+    var keyAES = CryptoJS.lib.WordArray.create(hash.words.slice(0, hashSize));
+    var keyHMAC = CryptoJS.lib.WordArray.create(hash.words.slice(hashSize));
+
+    // Create the cipher text that we are going to create a HMAC value for:
+    var newHmacVal = CryptoJS.enc.Latin1.parse('aes');
+    newHmacVal.concat(decoded);
+
+    var newHmac = CryptoJS.HmacSHA256(newHmacVal, keyHMAC);
+    var newHmacStr = CryptoJS.enc.Hex.stringify(newHmac);
+
+    if (newHmacStr !== hmac) {
+        return false;
+    }
+    var cipherTextRaw = CryptoJS.enc.Hex.parse(decodedCipher);
+
+    var decrypted = CryptoJS.AES.decrypt({
+        ciphertext: cipherTextRaw
+    }, keyAES, {
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7,
+        hasher: CryptoJS.algo.SHA256,
+        iv: iv
+    });
+
+    return decrypted.toString(CryptoJS.enc.Latin1);
+}
+
 function sendMessageToContent(msg, options) {
     options = options || {};
 
@@ -70,16 +168,25 @@ function loadCredentials() {
                 });
             },
             success: function (data) {
-                var link = document.createElement('a');
+                var decrypted, decryptedJSON, credential, link = document.createElement('a');
 
                 for (var i = 0; i < data._embedded.user_credential.length; ++i) {
-                    link.href = data._embedded.user_credential[i].urlRaw;
+                    credential = data._embedded.user_credential[i];
+
+                    link.href = credential.urlRaw;
+
+                    decrypted = aesDecrypt('test', credential.credentials);
+                    if (decrypted === false) {
+                        continue;
+                    }
+
+                    decryptedJSON = JSON.parse(decrypted);
 
                     credentialsCache.push({
-                        id: data._embedded.user_credential[i].id,
+                        id: credential.id,
                         host: link.hostname,
-                        identity: data._embedded.user_credential[i].identity,
-                        credential: data._embedded.user_credential[i].credential
+                        identity: decryptedJSON.identity,
+                        credential: decryptedJSON.credential
                     });
                 }
 
@@ -176,16 +283,64 @@ function MenuBuilder() {
         }
     };
 
-    var onRemove = function (info) {
-        console.log(info);
+    var removeOwnPassId = function(list, id) {
+        for (var i = 0; i < list.length; ++i) {
+            if (list[i].ownpass_id === id) {
+                chrome.contextMenus.remove(list[i].id);
+                break;
+            }
+        }
     };
 
-    var onRemoveAll = function (info) {
+    var removeMenuCredential = function(id) {
+        var token = JSON.parse(window.localStorage.getItem('oauth-token'));
+        var deviceIds = JSON.parse(window.localStorage.getItem('device-ids'));
+
+        removeOwnPassId(useList, id);
+        removeOwnPassId(copyUsernameList, id);
+        removeOwnPassId(copyPasswordList, id);
+        removeOwnPassId(removeList, id);
+
+        $.ajax({
+            url: token.server + '/user/credential/' + id,
+            method: 'DELETE',
+            headers: {
+                'Authorization': token.token_type + ' ' + token.access_token,
+                'X-OwnPass-Device': deviceIds[token.username].id
+            },
+            dataType: 'json',
+            error: function (jqXHR) {
+                console.error('An error did occur during the request:', jqXHR);
+            },
+            success: function (data) {
+                console.log(data);
+            }
+        });
+    };
+
+    var removeFromRemoveList = function (id) {
         for (var i = 0; i < credentialsCache.length; ++i) {
-            console.log(credentialsCache[i]);
+            if (credentialsCache[i].id === id) {
+                credentialsCache.splice(i, 1);
+                removeMenuCredential(id);
+                break;
+            }
         }
-        credentialsCache = [];
-        console.log(info);
+    };
+
+    var onRemove = function (info) {
+        for (var i = 0; i < removeList.length; ++i) {
+            if (removeList[i].id === info.menuItemId) {
+                removeFromRemoveList(removeList[i].value);
+                break;
+            }
+        }
+    };
+
+    var onRemoveAll = function () {
+        for (var i = 0; i < removeList.length; ++i) {
+            removeFromRemoveList(removeList[i].value);
+        }
     };
 
     this.update = function () {
@@ -266,6 +421,7 @@ function MenuBuilder() {
                         title: credentialsCache[i].identity,
                         onclick: onUse
                     }),
+                    ownpass_id: credentialsCache[i].id,
                     identity: credentialsCache[i].identity,
                     credential: credentialsCache[i].credential
                 });
@@ -277,6 +433,7 @@ function MenuBuilder() {
                         title: credentialsCache[i].identity,
                         onclick: onCopyUsername
                     }),
+                    ownpass_id: credentialsCache[i].id,
                     value: credentialsCache[i].identity
                 });
 
@@ -287,6 +444,7 @@ function MenuBuilder() {
                         title: credentialsCache[i].identity,
                         onclick: onCopyPassword
                     }),
+                    ownpass_id: credentialsCache[i].id,
                     value: credentialsCache[i].credential
                 });
 
@@ -297,7 +455,8 @@ function MenuBuilder() {
                         title: credentialsCache[i].identity,
                         onclick: onRemove
                     }),
-                    value: i
+                    ownpass_id: credentialsCache[i].id,
+                    value: credentialsCache[i].id
                 });
             }
         }
@@ -772,8 +931,10 @@ function Handler() {
             data: JSON.stringify({
                 raw_url: msg.url,
                 title: msg.title,
-                identity: msg.identity,
-                credential: msg.credential,
+                credentials: aesEncrypt('test', JSON.stringify({
+                    identity: msg.identity,
+                    credential: msg.credential,
+                })),
                 description: ''
             }),
             dataType: 'json',

@@ -14,6 +14,7 @@ module.exports = function (grunt) {
             background: {
                 src: [
                     'node_modules/jquery/dist/jquery.min.js',
+                    'node_modules/crypto-js/crypto-js.js',
                     'js/background.js'
                 ],
                 dest: 'build/unpacked/js/ownpass-extension-background.js'
@@ -30,6 +31,13 @@ module.exports = function (grunt) {
                     'js/popup.js'
                 ],
                 dest: 'build/unpacked/js/ownpass-extension-popup.js'
+            },
+            worker: {
+                src: [
+                    'node_modules/crypto-js/crypto-js.js',
+                    'js/worker.js'
+                ],
+                dest: 'build/unpacked/js/ownpass-extension-worker.js'
             }
         },
         compress: {
@@ -96,9 +104,6 @@ module.exports = function (grunt) {
                 'zip': 'build/packed/<%= pkg.name %>.zip'
             }
         },
-        exec: {
-            'browserify-worker': 'browserify js/worker.js -o build/unpacked/js/ownpass-extension-worker.js'
-        },
         jshint: {
             options: grunt.file.readJSON('jshint.json'),
             all: {
@@ -146,6 +151,13 @@ module.exports = function (grunt) {
                         'build/unpacked/js/ownpass-extension-popup.js'
                     ]
                 }
+            },
+            worker: {
+                files: {
+                    'build/unpacked/js/ownpass-extension-worker.min.js': [
+                        'build/unpacked/js/ownpass-extension-worker.js'
+                    ]
+                }
             }
         },
         watch: {
@@ -174,7 +186,6 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-contrib-sass');
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-watch');
-    grunt.loadNpmTasks('grunt-exec');
 
     grunt.registerTask('update-manifest', 'Updates the manifest file with the needed information.', function () {
         var manifest = grunt.file.readJSON('build/unpacked/manifest.json');
@@ -249,7 +260,6 @@ module.exports = function (grunt) {
         'clean',
         'jshint',
         'concat',
-        'exec:browserify-worker',
         'uglify',
         'sass',
         'copy',

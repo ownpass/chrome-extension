@@ -22,6 +22,7 @@
         "afterEach": true,
         "it": true,
         "cryptico": true,
-        "self": true
+        "self": true,
+        "CryptoJS": true
     }
 }
