@@ -2,6 +2,7 @@ var remindedUnauthenticated = false;
 var handler, menuBuilder;
 var credentialsCache = null;
 var worker = new Worker(chrome.extension.getURL('js/ownpass-extension-worker.js'));
+var masterPassword;
 
 /* jshint ignore:start */
 function ownpassdebug() {
@@ -114,6 +115,8 @@ function sendMessageToContent(msg, options) {
 function logout() {
     window.localStorage.removeItem('oauth-token');
 
+    masterPassword = null;
+
     chrome.runtime.sendMessage(null, {
         'cmd': 'ownpass-activate-screen',
         'screen': 'login-screen'
@@ -175,7 +178,7 @@ function loadCredentials() {
 
                     link.href = credential.urlRaw;
 
-                    decrypted = aesDecrypt('test', credential.credentials);
+                    decrypted = aesDecrypt(masterPassword, credential.credentials);
                     if (decrypted === false) {
                         continue;
                     }
@@ -577,6 +580,8 @@ function Handler() {
     };
 
     var retrieveOAuthToken = function (msg, callback) {
+        masterPassword = msg.password;
+
         $.ajax({
             url: msg.server + '/oauth',
             method: 'POST',
@@ -949,7 +954,7 @@ function Handler() {
             data: JSON.stringify({
                 raw_url: msg.url,
                 title: msg.title,
-                credentials: aesEncrypt('test', JSON.stringify({
+                credentials: aesEncrypt(masterPassword, JSON.stringify({
                     identity: msg.identity,
                     credential: msg.credential,
                 })),
