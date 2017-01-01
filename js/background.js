@@ -235,6 +235,9 @@ function MenuBuilder() {
         for (var i = 0; i < list.length; ++i) {
             chrome.contextMenus.remove(list[i].id);
         }
+
+        // Clear the array
+        list.length = 0;
     };
 
     var onUse = function (info) {
@@ -287,6 +290,7 @@ function MenuBuilder() {
         for (var i = 0; i < list.length; ++i) {
             if (list[i].ownpass_id === id) {
                 chrome.contextMenus.remove(list[i].id);
+                list.splice(i, 1);
                 break;
             }
         }
@@ -295,6 +299,11 @@ function MenuBuilder() {
     var removeMenuCredential = function(id) {
         var token = JSON.parse(window.localStorage.getItem('oauth-token'));
         var deviceIds = JSON.parse(window.localStorage.getItem('device-ids'));
+
+        // TODO: Fix this bug, why do we get an undefined value in here?
+        if (id === undefined || id === 'undefined') {
+            return;
+        }
 
         removeOwnPassId(useList, id);
         removeOwnPassId(copyUsernameList, id);
@@ -527,6 +536,15 @@ function Handler() {
 
     this.ping = function (msg, sender, callback) {
         var token = JSON.parse(window.localStorage.getItem('oauth-token'));
+        if (!token) {
+            logout();
+
+            callback({
+                authenticated: false,
+                data: null
+            });
+            return;
+        }
 
         $.ajax({
             url: token.server + '/ping',
