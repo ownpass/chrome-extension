@@ -30,6 +30,8 @@
     "grunt-contrib-sass": "^1.0.0",
     "grunt-contrib-uglify": "^2.0.0",
     "grunt-contrib-watch": "^1.0.0",
-    "grunt-exec": "^1.0.1"
+    "grunt-exec": "^1.0.1",
+    "grunt-webstore-upload": "^0.9.4",
+    "load-grunt-config": "^0.19.2"
   }
 }
