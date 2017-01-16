@@ -9,6 +9,7 @@ sudo: false
 
 before_install:
 - npm install grunt-cli -g
+- openssl aes-256-cbc -K $encrypted_4f444155ff81_key -iv $encrypted_4f444155ff81_iv -in webstore.json.enc -out config/webstore.json -d
 
 install:
 - npm install --dev
