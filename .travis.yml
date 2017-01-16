@@ -1,0 +1,28 @@
+language: node_js
+
+node_js:
+- 6
+
+# This triggers builds to run on the new TravisCI infrastructure.
+# See: http://docs.travis-ci.com/user/workers/container-based-infrastructure/
+sudo: false
+
+before_install:
+- npm install grunt-cli -g
+
+install:
+- npm install --dev
+
+before_script:
+- grunt
+
+script:
+- npm test
+
+after_success:
+- if [[ "$TRAVIS_TAG" != "" ]]; then grunt publish ; fi
+
+
+notifications:
+  email: false
+  irc: irc.freenode.org#ownpass
